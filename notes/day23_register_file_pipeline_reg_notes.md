@@ -91,3 +91,72 @@ One parameterized module handles all stages cleanly.
 ## Tomorrow — Day 24
 Build risc_v_alu_top.sv — connect all modules:
 alu_core + register_file + pipeline_reg → full pipeline
+### EX/MEM Register — 40 bits
+[39:8] = alu_result (32 bits)
+
+[7]    = zero       (1 bit)
+
+[6]    = negative   (1 bit)
+
+[5]    = overflow   (1 bit)
+
+[4:0]  = rd_addr    (5 bits)
+
+---
+
+## Test Results
+
+| Test | Operation | Expected | Status |
+|------|-----------|----------|--------|
+| 1 | ADD x1+x2 | 30 | PASS ✅ |
+| 2 | SUB x2-x1 | 10 | PASS ✅ |
+| 3 | AND x3&x4 | 0x0F0F | PASS ✅ |
+| 4 | OR  x3\|x4 | 0xFFFF | PASS ✅ |
+| 5 | XOR x3^x4 | 0xF0F0 | PASS ✅ |
+| 6 | STALL | holds | PASS ✅ |
+| 7 | FLUSH | clears | PASS ✅ |
+
+---
+
+## Key Concepts Applied
+
+### Signal Packing/Unpacking
+Bundling multiple signals into one wide bus for
+pipeline register:
+```sv
+assign idex_in = {rs1_data_id, rs2_data_id, rd_addr_in, alu_ctrl_in};
+assign {rs1_data_ex, rs2_data_ex, rd_addr_ex, alu_ctrl_ex} = idex_out;
+```
+Clean, readable, synthesizable. Width must match exactly.
+
+### Pipeline Latency
+2 cycle latency from input to output:
+- Cycle 1: ID stage reads register file
+- Cycle 2: ID/EX reg → EX stage ALU computes
+- Cycle 3: EX/MEM reg → result available at output
+
+### Stall Behavior
+When stall=1: pipeline registers hold their values.
+In-flight instruction pauses — no new data enters.
+
+### Flush Behavior
+When flush=1: pipeline registers clear to 0.
+Inserts bubble — used on branch misprediction.
+
+---
+
+## Module Hierarchy — Complete So Far
+risc_v_alu_top.sv      ← TODAY ✅
+
+├── register_file.sv   ← Day 23 ✅
+
+├── pipeline_reg.sv    ← Day 23 ✅ (used twice)
+
+└── alu_core.sv        ← Day 22 ✅
+
+---
+
+## Tomorrow — Day 25
+- hazard_unit.sv — RAW hazard detection
+- forwarding_unit.sv — EX-EX and MEM-WB forwarding
+- Integrate into top module
